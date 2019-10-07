@@ -1,2 +1,1 @@
-# geofire-xamarin
-GeoFire for Xamarin — Realtime location queries with Firebase
+# GeoFire for Xamarin — Realtime location queries with Firebase
