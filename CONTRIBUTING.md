@@ -19,8 +19,6 @@ If any member of the community violates this code of conduct, the maintainers of
 
 ## <a name="question"></a> Got a Question or Problem?
 
-If you have questions about how to use the project, please direct these to [StackOverflow][stackoverflow] and use the `firebase` tag. We are also available on GitHub issues.
-
 If you feel that we're missing an important bit of documentation, feel free to
 file an issue so we can help. Here's an example to get you started:
 
