@@ -1,59 +1,36 @@
 ﻿using System;
-using System.Collections.Generic;
-using Firebase.Firestore;
-using GeoFire.Test.Android.Plugin.CloudFirestore;
-using NUnit.Framework;
+using System.Threading;
+using System.Threading.Tasks;
 using Plugin.CloudFirestore;
+using Xunit;
 
 namespace GeoFire.Test.Android
 {
-    [TestFixture]
     public class TestsSample
     {
 
-        [SetUp]
-        public void Setup() { }
+        //[SetUp]
+        //public void Setup() { }
 
 
-        [TearDown]
-        public void Tear() { }
+        //[TearDown]
+        //public void Tear() { }
 
-        [Test]
-        public void TestAddLocation()
+        [Fact]
+        public async Task GetAndSetLocation()
         {
-            var firestore = CrossCloudFirestore.Current.Instance;
-            firestore.FirestoreSettings.AreTimestampsInSnapshotsEnabled = true;
-            // var geoFire = new GeoFire(firestore, "test");
+            var geoFire = new GeoFire("test");
             try
             {
-                firestore.Collection("test").Document("node1").Set(new Dictionary<string, string> {{"test", "wewe"}}.ToNativeFieldValues(), SetOptions.Merge());
-                //await geoFire.SetLocationAsync("node1", new GeoPoint(0, 0));
+                await geoFire.SetLocationAsync("ququ2", new GeoPoint(5, 10));
+                var geoPoint = await geoFire.GetLocationAsync("ququ2");
+                Assert.Equal(new GeoPoint(5, 10), geoPoint);
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
-                throw;
+                Assert.Null(e);
             }
             Assert.True(true);
-        }
-
-        [Test]
-        public void Fail()
-        {
-            Assert.False(true);
-        }
-
-        [Test]
-        [Ignore("another time")]
-        public void Ignore()
-        {
-            Assert.True(false);
-        }
-
-        [Test]
-        public void Inconclusive()
-        {
-            Assert.Inconclusive("Inconclusive");
         }
     }
 }

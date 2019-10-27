@@ -33,33 +33,25 @@ namespace GeoFire
 
         public static GeoPoint GetLocationValue(IDocumentSnapshot documentSnapshot)
         {
-            try
+            var data = documentSnapshot.Data;
+            var location = (List<object>) data["l"];
+            if (location.Count != 2)
             {
-                var data = documentSnapshot.Data;
-                var location = (List<double>) data["l"];
-                var latitude = location[0];
-                var longitude = location[1];
-                if (location.Count == 2 && GeoUtils.CoordinatesValid(latitude, longitude))
-                {
-                    return new GeoPoint(latitude, longitude);
-                }
-                return null;
+                throw new ArgumentException(
+                    $"Check {documentSnapshot.Id}. Location must contain latitude and longitude. " +
+                    $"The size of location is {location.Count} now.");
             }
-            catch (NullReferenceException)
+            var latitude = (double) location[0];
+            var longitude = (double) location[1];
+            if (!GeoUtils.CoordinatesValid(latitude, longitude))
             {
-                return null;
+                throw new ArgumentException($"Check {documentSnapshot.Id}. " +
+                                            $"GeoPoint [lat: {latitude}, long: {longitude}] is invalid");
             }
-            catch (InvalidCastException)
-            {
-                return null;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            return new GeoPoint(latitude, longitude);
         }
 
-        private readonly ICollectionReference _collection;
+        private readonly ICollectionReference _collectionRef;
         private readonly IEventRaiser _eventRaiser;
 
         /**
@@ -67,24 +59,27 @@ namespace GeoFire
          *
          * @param databaseReference The Firebase reference this GeoFire instance uses
          */
-        public GeoFire(IFirestore firestore, string collectionPath)
+        public GeoFire(string collectionPath)
         {
-            _collection = firestore.GetCollection(collectionPath);
-            _eventRaiser = new ThreadEventRaiser();;
+            var firestore = CrossCloudFirestore.Current.Instance;
+            _collectionRef = firestore.GetCollection(collectionPath);
+            _eventRaiser = new ThreadEventRaiser();
         }
 
         /**
          * @return The Firebase reference this GeoFire instance uses
          */
-        public ICollectionReference GetCollection()
+        public ICollectionReference GetCollectionRef()
         {
-            return _collection;
+            return _collectionRef;
         }
 
-        public IDocumentReference GetDocument(string key)
+        public IDocumentReference GetDocumentRef(string key)
         {
-            return _collection.GetDocument(key);
+            return _collectionRef.GetDocument(key);
         }
+
+        private TaskCompletionSource<bool> _tcs;
 
         /**
          * Sets the location for a given key.
@@ -100,14 +95,13 @@ namespace GeoFire
                 throw new NullReferenceException();
             }
 
-            var keyRef = GetCollection().GetDocument(path);
+            var keyRef = GetDocumentRef(path);
             var geoHash = new GeoHash(point);
             var data = new Dictionary<string, object>
             {
-                {"g", geoHash.GetGeoHashString()},
-                {"l", new List<double> {point.Latitude, point.Longitude}}
+                {"g", geoHash.GetGeoHashString()}, {"l", new[] {point.Latitude, point.Longitude}}
             };
-            return keyRef.SetDataAsync(data, true);
+            return keyRef.SetDataAsync(data);
         }
 
         /**
@@ -122,7 +116,7 @@ namespace GeoFire
             {
                 throw new NullReferenceException();
             }
-            var keyRef = GetDocument(key);
+            var keyRef = GetDocumentRef(key);
             await keyRef.DeleteDocumentAsync();
         }
 
@@ -133,7 +127,7 @@ namespace GeoFire
          */
         public async Task<GeoPoint> GetLocationAsync(string key)
         {
-            var keyRef = GetDocument(key);
+            var keyRef = GetDocumentRef(key);
             return GetLocationValue(await keyRef.GetDocumentAsync());
         }
 

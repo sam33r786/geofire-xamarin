@@ -165,7 +165,7 @@ namespace GeoFire
             foreach (var query in newQueries.Where(query => !oldQueries.Contains(query)))
             {
                 _outstandingQueries.Add(query);
-                var collection = _geoFire.GetCollection();
+                var collection = _geoFire.GetCollectionRef();
                 var firebaseQuery = collection.OrderBy("g").StartAt(query.GetStartValue())
                     .EndAt(query.GetEndValue());
                 _queryListeners.Add(query, firebaseQuery.AddSnapshotListener((snapshot, e) =>

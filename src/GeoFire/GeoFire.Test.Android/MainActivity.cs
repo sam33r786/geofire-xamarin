@@ -3,26 +3,32 @@
 using Android.App;
 using Android.OS;
 using Firebase;
-using Xamarin.Android.NUnitLite;
+using Firebase.Firestore;
+using Xunit.Runners.UI;
+using Xunit.Sdk;
 
 namespace GeoFire.Test.Android
 {
     [Activity(Label = "GeoFire.Test.Android", MainLauncher = true)]
-    public class MainActivity : TestSuiteActivity
+    public class MainActivity : RunnerActivity
     {
         protected override void OnCreate(Bundle bundle)
         {
             FirebaseApp.InitializeApp(this);
+            var firestore = FirebaseFirestore.Instance;
+            var settings = new FirebaseFirestoreSettings.Builder()
+                .SetTimestampsInSnapshotsEnabled(true)
+                .Build();
+            firestore.FirestoreSettings = settings;
             
             // tests can be inside the main assembly
-            AddTest(Assembly.GetExecutingAssembly());
+            AddTestAssembly(Assembly.GetExecutingAssembly());
+            AddExecutionAssembly(typeof(ExtensibilityPointFactory).Assembly);
             // or in any reference assemblies
             // AddTest (typeof (Your.Library.TestClass).Assembly);
 
             // Once you called base.OnCreate(), you cannot add more assemblies.
-            
             base.OnCreate(bundle);
-            
         }
     }
 }
