@@ -22,6 +22,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using GeoFire.Core;
 using GeoFire.Util;
@@ -29,12 +30,19 @@ using Plugin.CloudFirestore;
 
 namespace GeoFire
 {
-    public class GeoQuery
+    public class GeoQuery<T> : IDisposable
     {
         private readonly object _lock = new object();
 
         private const int KilometerToMeter = 1000;
 
+        public event EventHandler<DocumentEventArgs<T>> OnDocumentEntered;
+        public event EventHandler<DocumentEventArgs<T>> OnDocumentExited;
+        public event EventHandler<DocumentEventArgs<T>> OnDocumentChanged;
+        public event EventHandler<DocumentEventArgs<T>> OnDocumentMoved;
+        public event EventHandler<ErrorEventArgs> OnError;
+        public event EventHandler<EventArgs> OnQueryReady;
+        
         private class LocationInfo
         {
             public GeoPoint Location { get; }
@@ -52,7 +60,6 @@ namespace GeoFire
         }
 
         private readonly GeoFire _geoFire;
-        private readonly HashSet<IGeoQueryDataEventListener> _eventListeners = new HashSet<IGeoQueryDataEventListener>();
         private readonly Dictionary<GeoHashQuery, IQuery> _firebaseQueries = new Dictionary<GeoHashQuery, IQuery>();
         private readonly Dictionary<GeoHashQuery, IListenerRegistration> _queryListeners = new Dictionary<GeoHashQuery, IListenerRegistration>();
         private readonly HashSet<GeoHashQuery> _outstandingQueries = new HashSet<GeoHashQuery>();
@@ -66,6 +73,7 @@ namespace GeoFire
             _geoFire = geoFire;
             _center = center;
             _radius = radius * KilometerToMeter; // Convert from kilometers to meters.
+            SetupQueries();
         }
 
         private bool LocationIsInQuery(GeoPoint location)
@@ -76,7 +84,7 @@ namespace GeoFire
         private void UpdateLocationInfo(IDocumentSnapshot document, GeoPoint location)
         {
             var key = document.Id;
-            var oldInfo = _locationInfos[key];
+            _locationInfos.TryGetValue(key, out var oldInfo);
             var isNew = oldInfo == null;
             var changedLocation = oldInfo != null && !Equals(oldInfo.Location, location);
             var wasInQuery = oldInfo != null && oldInfo.InGeoQuery;
@@ -84,30 +92,19 @@ namespace GeoFire
             var isInQuery = LocationIsInQuery(location);
             if ((isNew || !wasInQuery) && isInQuery)
             {
-                foreach (var listener in _eventListeners) {
-                    _geoFire.RaiseEvent(() => listener.OnDocumentEntered(document, location));
-                }
+                OnDocumentEntered?.Invoke(this, new DocumentEventArgs<T>(document.ToObject<T>(), location));
             }
             else if (!isNew && isInQuery)
             {
-                foreach (var listener in _eventListeners)
+                if (changedLocation)
                 {
-                    _geoFire.RaiseEvent(() =>
-                    {
-                        if (changedLocation)
-                        {
-                            listener.OnDocumentMoved(document, location);
-                        }
-                        listener.OnDocumentChanged(document, location);
-                    });
+                    OnDocumentMoved?.Invoke(this, new DocumentEventArgs<T>(document.ToObject<T>(), location));
                 }
+                OnDocumentChanged?.Invoke(this, new DocumentEventArgs<T>(document.ToObject<T>(), location));
             }
             else if (wasInQuery && !isInQuery)
             {
-                foreach (var listener in _eventListeners)
-                {
-                    _geoFire.RaiseEvent(r: () => listener.OnDocumentExited(document));
-                }
+                OnDocumentExited?.Invoke(this, new DocumentEventArgs<T>(document.ToObject<T>()));
             }
 
             var newInfo = new LocationInfo(location, LocationIsInQuery(location), document);
@@ -132,9 +129,14 @@ namespace GeoFire
             _locationInfos.Clear();
         }
 
-        private bool HasListeners()
+        private bool HasEventHandlers()
         {
-            return _eventListeners.Any();
+            return OnDocumentEntered != null
+                   || OnDocumentExited != null
+                   || OnDocumentChanged != null
+                   || OnDocumentMoved != null
+                   || OnQueryReady != null
+                   || OnError != null;
         }
 
         private bool CanFireReady()
@@ -145,11 +147,7 @@ namespace GeoFire
         private void CheckAndFireReady()
         {
             if (!CanFireReady()) return;
-            
-            foreach (var listener in _eventListeners)
-            {
-                _geoFire.RaiseEvent(() => listener.OnGeoQueryReady());
-            }
+            OnQueryReady?.Invoke(this, new EventArgs());
         }
         
         private void SetupQueries()
@@ -172,15 +170,12 @@ namespace GeoFire
                 {
                     if (e != null)
                     {
-                        foreach (var listener in _eventListeners) 
-                        {
-                            _geoFire.RaiseEvent(() => listener.OnGeoQueryError(e));
-                        }
+                        OnError?.Invoke(this, new ErrorEventArgs(e));
                         return;
                     }
                     lock (_lock)
                     {
-                        var firQuery = _firebaseQueries.First(x => x.Value == snapshot.Query).Key;
+                        var firQuery = _firebaseQueries.First(x => x.Value.Equals(snapshot.Query)).Key;
                         _outstandingQueries.Remove(firQuery);
                         CheckAndFireReady();
                     }
@@ -258,167 +253,9 @@ namespace GeoFire
                 
                 if (!info.InGeoQuery) return;
                 
-                foreach (var listener in _eventListeners)
-                {
-                    _geoFire.RaiseEvent(() => listener.OnDocumentExited(info.Snapshot));
-                }
+                OnDocumentExited?.Invoke(this, new DocumentEventArgs<T>(info.Snapshot.ToObject<T>()));
             }
 
-        }
-
-        /**
-         * Adds a new GeoQueryEventListener to this GeoQuery.
-         *
-         * @throws IllegalArgumentException If this listener was already added
-         *
-         * @param listener The listener to add
-         */
-        public void AddGeoQueryEventListener(IGeoQueryEventListener listener)
-        {
-            lock (_lock)
-            {
-                AddGeoQueryDataEventListener(new EventListenerBridge(listener));
-            }
-        }
-
-        /**
-         * Adds a new GeoQueryEventListener to this GeoQuery.
-         *
-         * @throws IllegalArgumentException If this listener was already added
-         *
-         * @param listener The listener to add
-         */
-        public void AddGeoQueryDataEventListener(IGeoQueryDataEventListener listener)
-        {
-            lock (_lock)
-            {
-                if (_eventListeners.Contains(listener))
-                {
-                    throw new ArgumentException("Added the same listener twice to a GeoQuery!");
-                }
-
-                _eventListeners.Add(listener);
-                if (_queries == null)
-                {
-                    SetupQueries();
-                }
-                else
-                {
-                    foreach (var info in _locationInfos.Select(entry => entry.Value).Where(info => info.InGeoQuery))
-                    {
-                        _geoFire.RaiseEvent(() => listener.OnDocumentEntered(info.Snapshot, info.Location));
-                    }
-
-                    if (CanFireReady())
-                    {
-                        _geoFire.RaiseEvent(listener.OnGeoQueryReady);
-                    }
-                }
-            }
-        }
-
-        /**
-         * Removes an event listener.
-         *
-         * @throws IllegalArgumentException If the listener was removed already or never added
-         *
-         * @param listener The listener to remove
-         */
-        public void RemoveGeoQueryEventListener(IGeoQueryEventListener listener)
-        {
-            lock (_lock)
-            {
-                RemoveGeoQueryEventListener(new EventListenerBridge(listener));
-            }
-        }
-
-        /**
-         * Removes an event listener.
-         *
-         * @throws IllegalArgumentException If the listener was removed already or never added
-         *
-         * @param listener The listener to remove
-         */
-        public void RemoveGeoQueryEventListener(IGeoQueryDataEventListener listener)
-        {
-            lock (_lock)
-            {
-                if (!_eventListeners.Contains(listener))
-                {
-                    throw new ArgumentException("Trying to remove listener that was removed or not added!");
-                }
-
-                _eventListeners.Remove(listener);
-                if (!HasListeners())
-                {
-                    Reset();
-                }   
-            }
-        }
-
-        /**
-         * Removes all event listeners from this GeoQuery.
-         */
-        public void RemoveAllListeners()
-        {
-            lock (_lock)
-            {
-                _eventListeners.Clear();
-                Reset();   
-            }
-        }
-
-        /**
-         * Returns the current center of this query.
-         * @return The current center
-         */
-        public GeoPoint GetCenter()
-        {
-            return _center;
-        }
-
-        /**
-         * Sets the new center of this query and triggers new events if necessary.
-         * @param center The new center
-         */
-        public void SetCenter(GeoPoint center)
-        {
-            lock (_lock)
-            {
-                _center = center;
-                if (HasListeners())
-                {
-                    SetupQueries();
-                }   
-            }
-        }
-
-        /**
-         * Returns the radius of the query, in kilometers.
-         * @return The radius of this query, in kilometers
-         */
-        public double GetRadius()
-        {
-            // convert from meters
-            return _radius / KilometerToMeter;
-        }
-
-        /**
-         * Sets the radius of this query, in kilometers, and triggers new events if necessary.
-         * @param radius The radius of the query, in kilometers. The Maximum radius that is
-         * supported is about 8587km. If a radius bigger than this is passed we'll cap it.
-         */
-        public void SetRadius(double radius)
-        {
-            lock (_lock)
-            {
-                // convert to meters
-                _radius = GeoUtils.CapRadius(radius) * KilometerToMeter;
-                if (HasListeners())
-                {
-                    SetupQueries();
-                }   
-            }
         }
 
         /**
@@ -434,11 +271,28 @@ namespace GeoFire
                 _center = center;
                 // convert radius to meters
                 _radius = GeoUtils.CapRadius(radius) * KilometerToMeter;
-                if (HasListeners())
+                if (HasEventHandlers())
                 {
                     SetupQueries();
                 }   
             }
+        }
+
+        public void Dispose()
+        {
+            Reset();
+        }
+    }
+
+    public class DocumentEventArgs<T> : EventArgs
+    {
+        public GeoPoint Location { get; }
+        public T Document { get; }
+
+        public DocumentEventArgs(T document, GeoPoint location = null)
+        {
+            Location = location;
+            Document = document;
         }
     }
 }

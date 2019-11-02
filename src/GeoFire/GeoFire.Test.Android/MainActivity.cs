@@ -3,7 +3,7 @@
 using Android.App;
 using Android.OS;
 using Firebase;
-using Firebase.Firestore;
+using Plugin.CloudFirestore;
 using Xunit.Runners.UI;
 using Xunit.Sdk;
 
@@ -15,11 +15,10 @@ namespace GeoFire.Test.Android
         protected override void OnCreate(Bundle bundle)
         {
             FirebaseApp.InitializeApp(this);
-            var firestore = FirebaseFirestore.Instance;
-            var settings = new FirebaseFirestoreSettings.Builder()
-                .SetTimestampsInSnapshotsEnabled(true)
-                .Build();
-            firestore.FirestoreSettings = settings;
+            CrossCloudFirestore.Current.Instance.FirestoreSettings = new FirestoreSettings
+            {
+                AreTimestampsInSnapshotsEnabled = true,
+            };
             
             // tests can be inside the main assembly
             AddTestAssembly(Assembly.GetExecutingAssembly());

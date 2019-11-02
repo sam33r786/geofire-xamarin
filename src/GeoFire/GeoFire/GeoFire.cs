@@ -34,15 +34,8 @@ namespace GeoFire
         public static GeoPoint GetLocationValue(IDocumentSnapshot documentSnapshot)
         {
             var data = documentSnapshot.Data;
-            var location = (List<object>) data["l"];
-            if (location.Count != 2)
-            {
-                throw new ArgumentException(
-                    $"Check {documentSnapshot.Id}. Location must contain latitude and longitude. " +
-                    $"The size of location is {location.Count} now.");
-            }
-            var latitude = (double) location[0];
-            var longitude = (double) location[1];
+            var latitude = (double) data["lt"];
+            var longitude = (double) data["lg"];
             if (!GeoUtils.CoordinatesValid(latitude, longitude))
             {
                 throw new ArgumentException($"Check {documentSnapshot.Id}. " +
@@ -52,7 +45,6 @@ namespace GeoFire
         }
 
         private readonly ICollectionReference _collectionRef;
-        private readonly IEventRaiser _eventRaiser;
 
         /**
          * Creates a new GeoFire instance at the given Firebase reference.
@@ -63,7 +55,6 @@ namespace GeoFire
         {
             var firestore = CrossCloudFirestore.Current.Instance;
             _collectionRef = firestore.GetCollection(collectionPath);
-            _eventRaiser = new ThreadEventRaiser();
         }
 
         /**
@@ -78,8 +69,6 @@ namespace GeoFire
         {
             return _collectionRef.GetDocument(key);
         }
-
-        private TaskCompletionSource<bool> _tcs;
 
         /**
          * Sets the location for a given key.
@@ -99,9 +88,11 @@ namespace GeoFire
             var geoHash = new GeoHash(point);
             var data = new Dictionary<string, object>
             {
-                {"g", geoHash.GetGeoHashString()}, {"l", new[] {point.Latitude, point.Longitude}}
+                {"g", geoHash.GetGeoHashString()}, 
+                {"lt", point.Latitude},
+                {"lg", point.Longitude}
             };
-            return keyRef.SetDataAsync(data);
+            return keyRef.SetDataAsync(data, true);
         }
 
         /**
@@ -111,13 +102,16 @@ namespace GeoFire
          * @param completionListener A completion listener that is called once the location is successfully removed
          *                           from the server or an error occurred
          */
-        public async void RemoveLocation(string key) {
+        public async Task RemoveLocationAsync(string key) {
             if (key == null)
             {
                 throw new NullReferenceException();
             }
             var keyRef = GetDocumentRef(key);
-            await keyRef.DeleteDocumentAsync();
+            await keyRef.UpdateDataAsync(
+                "g", FieldValue.Delete, 
+                "lt", FieldValue.Delete, 
+                "lg", FieldValue.Delete);
         }
 
         /**
@@ -139,14 +133,9 @@ namespace GeoFire
          * supported is about 8587km. If a radius bigger than this is passed we'll cap it.
          * @return The new GeoQuery object
          */
-        public GeoQuery QueryAtLocation(GeoPoint center, double radius)
+        public GeoQuery<T> QueryAtLocation<T>(GeoPoint center, double radius)
         {
-            return new GeoQuery(this, center, GeoUtils.CapRadius(radius));
-        }
-
-        public void RaiseEvent(Action r)
-        {
-            _eventRaiser.RaiseEvent(r);
+            return new GeoQuery<T>(this, center, GeoUtils.CapRadius(radius));
         }
     }
 }

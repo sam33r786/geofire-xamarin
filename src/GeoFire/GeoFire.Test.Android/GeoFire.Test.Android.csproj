@@ -196,7 +196,7 @@
       <HintPath>..\packages\Xamarin.Firebase.Firestore.71.1705.0\lib\monoandroid90\Xamarin.Firebase.Firestore.dll</HintPath>
     </Reference>
     <Reference Include="Plugin.CloudFirestore">
-      <HintPath>..\packages\Plugin.CloudFirestore.2.0.0\lib\monoandroid90\Plugin.CloudFirestore.dll</HintPath>
+      <HintPath>..\packages\Plugin.CloudFirestore.2.0.1\lib\monoandroid90\Plugin.CloudFirestore.dll</HintPath>
     </Reference>
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.Net.Http" />
@@ -277,7 +277,6 @@
     <None Include="Resources\AboutResources.txt" />
     <None Include="packages.config" />
     <None Include="Properties\AndroidManifest.xml" />
-    <None Include="MainActivity.cs.txt" />
   </ItemGroup>
   <ItemGroup>
     <AndroidResource Include="Resources\mipmap-hdpi\Icon.png">
@@ -321,13 +320,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <GoogleServicesJson Include="google-services.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="MainActivity.cs.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <Analyzer Include="..\packages\xunit.analyzers.0.10.0\analyzers\dotnet\cs\xunit.analyzers.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <GoogleServicesJson Include="google-services.json" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
   <Import Project="..\packages\Xamarin.Android.Support.Annotations.28.0.0.1\build\monoandroid90\Xamarin.Android.Support.Annotations.targets" Condition="Exists('..\packages\Xamarin.Android.Support.Annotations.28.0.0.1\build\monoandroid90\Xamarin.Android.Support.Annotations.targets')" />
@@ -367,7 +363,6 @@
   <Import Project="..\packages\Xamarin.GooglePlayServices.Base.71.1610.0\build\MonoAndroid90\Xamarin.GooglePlayServices.Base.targets" Condition="Exists('..\packages\Xamarin.GooglePlayServices.Base.71.1610.0\build\MonoAndroid90\Xamarin.GooglePlayServices.Base.targets')" />
   <Import Project="..\packages\Xamarin.Firebase.ProtoliteWellKnownTypes.71.1601.0\build\MonoAndroid90\Xamarin.Firebase.ProtoliteWellKnownTypes.targets" Condition="Exists('..\packages\Xamarin.Firebase.ProtoliteWellKnownTypes.71.1601.0\build\MonoAndroid90\Xamarin.Firebase.ProtoliteWellKnownTypes.targets')" />
   <Import Project="..\packages\Xamarin.Firebase.Firestore.71.1705.0\build\MonoAndroid90\Xamarin.Firebase.Firestore.targets" Condition="Exists('..\packages\Xamarin.Firebase.Firestore.71.1705.0\build\MonoAndroid90\Xamarin.Firebase.Firestore.targets')" />
-  <Import Project="..\packages\Plugin.CloudFirestore.2.0.0\build\Plugin.CloudFirestore.targets" Condition="Exists('..\packages\Plugin.CloudFirestore.2.0.0\build\Plugin.CloudFirestore.targets')" />
   <Import Project="..\packages\Xamarin.Android.Support.v7.CardView.28.0.0.1\build\monoandroid90\Xamarin.Android.Support.v7.CardView.targets" Condition="Exists('..\packages\Xamarin.Android.Support.v7.CardView.28.0.0.1\build\monoandroid90\Xamarin.Android.Support.v7.CardView.targets')" />
   <Import Project="..\packages\Xamarin.Android.Support.v7.Palette.28.0.0.1\build\monoandroid90\Xamarin.Android.Support.v7.Palette.targets" Condition="Exists('..\packages\Xamarin.Android.Support.v7.Palette.28.0.0.1\build\monoandroid90\Xamarin.Android.Support.v7.Palette.targets')" />
   <Import Project="..\packages\Xamarin.Android.Support.Vector.Drawable.28.0.0.1\build\monoandroid90\Xamarin.Android.Support.Vector.Drawable.targets" Condition="Exists('..\packages\Xamarin.Android.Support.Vector.Drawable.28.0.0.1\build\monoandroid90\Xamarin.Android.Support.Vector.Drawable.targets')" />
@@ -388,4 +383,5 @@
     <Error Condition="!Exists('..\packages\xunit.core.2.4.1\build\xunit.core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xunit.core.2.4.1\build\xunit.core.targets'))" />
   </Target>
   <Import Project="..\packages\xunit.core.2.4.1\build\xunit.core.targets" Condition="Exists('..\packages\xunit.core.2.4.1\build\xunit.core.targets')" />
+  <Import Project="..\packages\Plugin.CloudFirestore.2.0.1\build\Plugin.CloudFirestore.targets" Condition="Exists('..\packages\Plugin.CloudFirestore.2.0.1\build\Plugin.CloudFirestore.targets')" />
 </Project>
