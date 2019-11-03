@@ -34,14 +34,13 @@ namespace GeoFire
         public static GeoPoint GetLocationValue(IDocumentSnapshot documentSnapshot)
         {
             var data = documentSnapshot.Data;
-            var latitude = (double) data["lt"];
-            var longitude = (double) data["lg"];
-            if (!GeoUtils.CoordinatesValid(latitude, longitude))
+            var geoPoint = (GeoPoint) data["l"];
+            if (!GeoUtils.CoordinatesValid(geoPoint.Latitude, geoPoint.Longitude))
             {
                 throw new ArgumentException($"Check {documentSnapshot.Id}. " +
-                                            $"GeoPoint [lat: {latitude}, long: {longitude}] is invalid");
+                                            $"GeoPoint [lat: {geoPoint.Latitude}, long: {geoPoint.Longitude}] is invalid");
             }
-            return new GeoPoint(latitude, longitude);
+            return geoPoint;
         }
 
         private readonly ICollectionReference _collectionRef;
@@ -89,10 +88,33 @@ namespace GeoFire
             var data = new Dictionary<string, object>
             {
                 {"g", geoHash.GetGeoHashString()}, 
-                {"lt", point.Latitude},
-                {"lg", point.Longitude}
+                {"l", point}
             };
             return keyRef.SetDataAsync(data, true);
+        }
+        
+        /**
+         * Sets the location for a given key.
+         *
+         * @param key                The key to save the location for
+         * @param location           The location of this key
+         * @param completionListener A listener that is called once the location was successfully saved on the server or an
+         *                           error occurred
+         */
+        public void SetLocation(string path, GeoPoint point, CompletionHandler completionHandler) {
+            if (path == null)
+            {
+                throw new NullReferenceException();
+            }
+
+            var keyRef = GetDocumentRef(path);
+            var geoHash = new GeoHash(point);
+            var data = new Dictionary<string, object>
+            {
+                {"g", geoHash.GetGeoHashString()}, 
+                {"l", point}
+            };
+            keyRef.SetData(data, true, completionHandler);
         }
 
         /**
@@ -110,8 +132,7 @@ namespace GeoFire
             var keyRef = GetDocumentRef(key);
             await keyRef.UpdateDataAsync(
                 "g", FieldValue.Delete, 
-                "lt", FieldValue.Delete, 
-                "lg", FieldValue.Delete);
+                "l", FieldValue.Delete);
         }
 
         /**

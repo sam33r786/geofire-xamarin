@@ -1,13 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Plugin.CloudFirestore;
+using Plugin.CloudFirestore.Attributes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace GeoFire.Test.Android
 {
     public class TestsSample
     {
+        private readonly ITestOutputHelper _testOutputHelper;
+
+        public TestsSample(ITestOutputHelper testOutputHelper)
+        {
+            _testOutputHelper = testOutputHelper;
+        }
 
         class Test
         {
@@ -56,8 +66,7 @@ namespace GeoFire.Test.Android
                 var doc = await CrossCloudFirestore.Current.Instance.GetDocument("/test/ququ2").GetDocumentAsync();
                 Assert.True(doc.Exists);
                 Assert.True(!doc.Data.ContainsKey("q"));
-                Assert.True(!doc.Data.ContainsKey("lt"));
-                Assert.True(!doc.Data.ContainsKey("gt"));
+                Assert.True(!doc.Data.ContainsKey("l"));
                 Assert.True(doc.Data.ContainsKey("test"));
             }
             catch (Exception e)
@@ -91,5 +100,66 @@ namespace GeoFire.Test.Android
             }
             Assert.True(true);
         }
+
+        [Fact]
+        public async Task UploadData()
+        {
+            var geoFire = new GeoFire("test");
+            using (var stream = Helper.Assets.Open("petmap-export.json"))
+            {
+                using (var reader = new StreamReader(stream))
+                {
+                    var text = reader.ReadToEnd();
+                    var pointsContainer = JsonConvert.DeserializeObject<PointsContainer>(text);
+                    var collection = CrossCloudFirestore.Current.Instance.GetCollection("points");
+                    foreach (var point in pointsContainer.Points)
+                    {
+                        var doc = collection.CreateDocument();
+                        doc.SetData(point, e =>
+                        {
+                            if (e != null)
+                            {
+                                throw e;
+                            }
+                        });
+                        geoFire.SetLocation(doc.Id, new GeoPoint(point.lt, point.ln), e1 =>
+                        {
+                            if (e1 != null)
+                            {
+                                _testOutputHelper.WriteLine(e1.ToString());   
+                            }
+                        });
+                        if (point.org == null)
+                        {
+                            doc.SetData(new Dictionary<string, object> {{"org", FieldValue.Delete}}, true,
+                                e =>
+                                {
+                                    if (e != null)
+                                    {
+                                        _testOutputHelper.WriteLine(e.ToString());   
+                                    }
+                                });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public class Point
+    {
+        [Ignored] public double lt { get; set; }
+        [Ignored] public double ln { get; set; }
+
+        public string title { get; set; }
+        public string org { get; set; }
+        public decimal prPr { get; set; }
+        public decimal regPr { get; set; }
+        
+    }
+
+    public class PointsContainer
+    {
+        [MapTo("points")] public Point[] Points { get; set; }
     }
 }

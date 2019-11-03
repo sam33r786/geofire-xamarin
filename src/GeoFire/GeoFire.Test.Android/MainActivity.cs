@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 
 using Android.App;
+using Android.Content.Res;
 using Android.OS;
 using Firebase;
 using Plugin.CloudFirestore;
@@ -19,6 +20,8 @@ namespace GeoFire.Test.Android
             {
                 AreTimestampsInSnapshotsEnabled = true,
             };
+
+            Helper.Assets = Assets;
             
             // tests can be inside the main assembly
             AddTestAssembly(Assembly.GetExecutingAssembly());
