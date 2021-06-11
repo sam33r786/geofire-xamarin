@@ -289,7 +289,7 @@ namespace GeoFire
         public GeoPoint Location { get; }
         public T Document { get; }
 
-        public DocumentEventArgs(T document, GeoPoint location = null)
+        public DocumentEventArgs(T document, GeoPoint location = default)
         {
             Location = location;
             Document = document;

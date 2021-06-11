@@ -97,7 +97,7 @@
       <HintPath>..\packages\Xamarin.Firebase.iOS.CloudFirestore.0.13.3\lib\Xamarin.iOS10\Firebase.CloudFirestore.dll</HintPath>
     </Reference>
     <Reference Include="Plugin.CloudFirestore">
-      <HintPath>..\packages\Plugin.CloudFirestore.2.0.1\lib\xamarinios10\Plugin.CloudFirestore.dll</HintPath>
+      <HintPath>..\packages\Plugin.CloudFirestore.4.1.0\lib\xamarinios10\Plugin.CloudFirestore.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -114,5 +114,5 @@
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\iOS\Xamarin.iOS.CSharp.targets" />
   <Import Project="..\packages\Xamarin.Build.Download.0.4.11\build\Xamarin.Build.Download.targets" Condition="Exists('..\packages\Xamarin.Build.Download.0.4.11\build\Xamarin.Build.Download.targets')" />
-  <Import Project="..\packages\Plugin.CloudFirestore.2.0.1\build\Plugin.CloudFirestore.targets" Condition="Exists('..\packages\Plugin.CloudFirestore.2.0.1\build\Plugin.CloudFirestore.targets')" />
+  <Import Project="..\packages\Plugin.CloudFirestore.4.1.0\build\Plugin.CloudFirestore.targets" Condition="Exists('..\packages\Plugin.CloudFirestore.4.1.0\build\Plugin.CloudFirestore.targets')" />
 </Project>
